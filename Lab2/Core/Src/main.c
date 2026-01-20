@@ -149,57 +149,57 @@ int main(void)
 
     HAL_Delay(20);
     /* USER CODE END WHILE */
-   char str[] = "Microcontrollers";
-   int key = 10059;
-   myPrintf("\tInitial String :%s", str);
-    for (int i = 0; i < strlen(str); i++) {
-        str[i] = (char)((int)str[i] + (key % 256));
-    }
+  //  char str[] = "Microcontrollers";
+  //  int key = 10059;
+  //  myPrintf("\tInitial String :%s", str);
+  //   for (int i = 0; i < strlen(str); i++) {
+  //       str[i] = (char)((int)str[i] + (key % 256));
+  //   }
 
-    //HAL_Delay(2000);
-    HAL_Delay(200);
-    myPrintf("\tEncrypted String :%s", str);
+  //   //HAL_Delay(2000);
+  //   HAL_Delay(200);
+  //   myPrintf("\tEncrypted String :%s", str);
 
-    HAL_Delay(200);
-    for (int i = 0; i < strlen(str); i++) {
-        str[i] = (char)((int)str[i] - (key % 256));
-    }
-    //HAL_Delay(2000);   
-    myPrintf("\tDecrypted String :%s\r\n", str);
+  //   HAL_Delay(200);
+  //   for (int i = 0; i < strlen(str); i++) {
+  //       str[i] = (char)((int)str[i] - (key % 256));
+  //   }
+  //   //HAL_Delay(2000);   
+  //   myPrintf("\tDecrypted String :%s\r\n", str);
 
     //Task4
 
-    // int A[2][2] = {{1, 2}, {3, 4}};
-    // int B[2][2] = {{5, 6}, {7, 8}};
-    // myPrintf("Marix A:\n\r");
+    int A[2][2] = {{1, 2}, {3, 4}};
+    int B[2][2] = {{5, 6}, {7, 8}};
+    myPrintf("Marix A:\n\r");
     
 
-    // for(int i=0;i<2;i++){
-    //   for(int j=0;j<2;j++){
-    //     myPrintf("%d ",A[i][j]);
-    //   }
-    //   myPrintf("\r\n");
-    // }
+    for(int i=0;i<2;i++){
+      for(int j=0;j<2;j++){
+        myPrintf("%d ",A[i][j]);
+      }
+      myPrintf("\r\n");
+    }
 
-    // myPrintf("Marix B:\n\r");
-    // for(int i=0;i<2;i++){
-    //   for(int j=0;j<2;j++){
-    //     myPrintf("%d ",B[i][j]);
-    //   }
-    //   myPrintf("\r\n");
-    // }
-    // myPrintf("Matrix Multiplication Result:\r\n");
+    myPrintf("Marix B:\n\r");
+    for(int i=0;i<2;i++){
+      for(int j=0;j<2;j++){
+        myPrintf("%d ",B[i][j]);
+      }
+      myPrintf("\r\n");
+    }
+    myPrintf("Matrix Multiplication Result:\r\n");
 
-    // for (int i = 0; i < 2; i++) {
-    //   for (int j = 0; j < 2; j++) {
-    //       int sum = 0;
-    //       for (int k = 0; k < 2; k++) {
-    //           sum += A[i][k] * B[k][j];
-    //       }
-    //       myPrintf("%d \t", sum);
-    //   }
-    //   myPrintf("\r\n");
-    // }
+    for (int i = 0; i < 2; i++) {
+      for (int j = 0; j < 2; j++) {
+          int sum = 0;
+          for (int k = 0; k < 2; k++) {
+              sum += A[i][k] * B[k][j];
+          }
+          myPrintf("%d \t", sum);
+      }
+      myPrintf("\r\n");
+    }
 
   // Task 5
   // int s = 100;
