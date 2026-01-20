@@ -20,6 +20,7 @@
 #include "main.h"
 #include "stdarg.h"
 #include "stdio.h"
+#include "stm32f3xx_hal.h"
 #include "string.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -82,10 +83,9 @@ static void MX_USB_PCD_Init(void);
     va_start(args, fmt);
     int len = vsnprintf(buffer, sizeof(buffer), fmt, args);
     va_end(args);
-    if (len > 0)
-    {
+    
         HAL_UART_Transmit(&huart2, (uint8_t *)buffer, len, HAL_MAX_DELAY);
-    }
+  
 }
 int main(void)
 {
@@ -122,13 +122,107 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  int a = 10;
+  int b = 20;
+  
+  int lhs = (a + b) * (a + b);
+  int rhs = a*a + 2*a*b + b*b;
+
+  
+
   while (1)
   {
 
+//Task 0
+  // HAL_UART_Transmit(&huart2, (uint8_t *)"Hello World", 10, HAL_MAX_DELAY);
+  
+  // Task 1
+  //  int x = 42;
+  //  float y = 3.14f;
+  //  myPrintf("Value of x = %d, y = %.2f\r\n", x, y);    
+  
+  Task 2
+    myPrintf("(%d + %d)2 = %d", a, b, lhs);
+    myPrintf("   %d2 + 2(%d)(%d) %d2 = %d\n\r", a, a, b, b, rhs);
+
+    // Task 3
+
+    HAL_Delay(20);
     /* USER CODE END WHILE */
-   int x = 42;
-    float y = 3.14f;
-    myPrintf("Value of x = %d, y = %f\r\n", x, y);    /* USER CODE BEGIN 3 */
+  //  char str[] = "Microcontrollers";
+  //  int key = 10059;
+  //  myPrintf("\tInitial String :%s", str);
+  //   for (int i = 0; i < strlen(str); i++) {
+  //       str[i] = (char)((int)str[i] + (key % 256));
+  //   }
+
+  //   //HAL_Delay(2000);
+  //   HAL_Delay(200);
+  //   myPrintf("\tEncrypted String :%s", str);
+
+  //   HAL_Delay(200);
+  //   for (int i = 0; i < strlen(str); i++) {
+  //       str[i] = (char)((int)str[i] - (key % 256));
+  //   }
+  //   //HAL_Delay(2000);   
+  //   myPrintf("\tDecrypted String :%s\r\n", str);
+
+    //Task4
+
+    // int A[2][2] = {{1, 2}, {3, 4}};
+    // int B[2][2] = {{5, 6}, {7, 8}};
+    // myPrintf("Marix A:\n\r");
+    
+
+    // for(int i=0;i<2;i++){
+    //   for(int j=0;j<2;j++){
+    //     myPrintf("%d ",A[i][j]);
+    //   }
+    //   myPrintf("\r\n");
+    // }
+
+    // myPrintf("Marix B:\n\r");
+    // for(int i=0;i<2;i++){
+    //   for(int j=0;j<2;j++){
+    //     myPrintf("%d ",B[i][j]);
+    //   }
+    //   myPrintf("\r\n");
+    // }
+    // myPrintf("Matrix Multiplication Result:\r\n");
+
+    // for (int i = 0; i < 2; i++) {
+    //   for (int j = 0; j < 2; j++) {
+    //       int sum = 0;
+    //       for (int k = 0; k < 2; k++) {
+    //           sum += A[i][k] * B[k][j];
+    //       }
+    //       myPrintf("%d \t", sum);
+    //   }
+    //   myPrintf("\r\n");
+    // }
+
+  // Task 5
+  // int s = 100;
+  // int e = 999;
+
+  // myPrintf("Armstrong numbers between %d and %d are:\n\r", s, e);
+  // for (int i = s; i <= e; i++) {
+  //   int k = i;    
+  //     int fnum = k % 10;      
+  //     k = k / 10;
+  //     int snum = k % 10;
+  //     k = k / 10;
+  //     int tnum = k;
+
+  //     int armstrong = (tnum * tnum * tnum) + (snum * snum * snum) + (fnum * fnum * fnum);
+
+  //     if (armstrong == i) {
+  //         myPrintf("%d\n\r", i);
+  //     }
+  // }
+
+  // 
+  // /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
 }
