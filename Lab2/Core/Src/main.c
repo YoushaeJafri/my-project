@@ -142,30 +142,30 @@ int main(void)
   //  myPrintf("Value of x = %d, y = %.2f\r\n", x, y);    
   
   // Task 2
-    myPrintf("(%d + %d)2 = %d", a, b, lhs);
-    myPrintf("   %d2 + 2(%d)(%d) %d2 = %d\n\r", a, a, b, b, rhs);
+    // myPrintf("(%d + %d)2 = %d", a, b, lhs);
+    // myPrintf("   %d2 + 2(%d)(%d) %d2 = %d\n\r", a, a, b, b, rhs);
 
     // Task 3
 
     HAL_Delay(20);
     /* USER CODE END WHILE */
-  //  char str[] = "Microcontrollers";
-  //  int key = 10059;
-  //  myPrintf("\tInitial String :%s", str);
-  //   for (int i = 0; i < strlen(str); i++) {
-  //       str[i] = (char)((int)str[i] + (key % 256));
-  //   }
+   char str[] = "Microcontrollers";
+   int key = 10059;
+   myPrintf("\tInitial String :%s", str);
+    for (int i = 0; i < strlen(str); i++) {
+        str[i] = (char)((int)str[i] + (key % 256));
+    }
 
-  //   //HAL_Delay(2000);
-  //   HAL_Delay(200);
-  //   myPrintf("\tEncrypted String :%s", str);
+    //HAL_Delay(2000);
+    HAL_Delay(200);
+    myPrintf("\tEncrypted String :%s", str);
 
-  //   HAL_Delay(200);
-  //   for (int i = 0; i < strlen(str); i++) {
-  //       str[i] = (char)((int)str[i] - (key % 256));
-  //   }
-  //   //HAL_Delay(2000);   
-  //   myPrintf("\tDecrypted String :%s\r\n", str);
+    HAL_Delay(200);
+    for (int i = 0; i < strlen(str); i++) {
+        str[i] = (char)((int)str[i] - (key % 256));
+    }
+    //HAL_Delay(2000);   
+    myPrintf("\tDecrypted String :%s\r\n", str);
 
     //Task4
 
