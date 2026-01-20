@@ -169,57 +169,57 @@ int main(void)
 
     //Task4
 
-    int A[2][2] = {{1, 2}, {3, 4}};
-    int B[2][2] = {{5, 6}, {7, 8}};
-    myPrintf("Marix A:\n\r");
+    // int A[2][2] = {{1, 2}, {3, 4}};
+    // int B[2][2] = {{5, 6}, {7, 8}};
+    // myPrintf("Marix A:\n\r");
     
 
-    for(int i=0;i<2;i++){
-      for(int j=0;j<2;j++){
-        myPrintf("%d ",A[i][j]);
-      }
-      myPrintf("\r\n");
-    }
+    // for(int i=0;i<2;i++){
+    //   for(int j=0;j<2;j++){
+    //     myPrintf("%d ",A[i][j]);
+    //   }
+    //   myPrintf("\r\n");
+    // }
 
-    myPrintf("Marix B:\n\r");
-    for(int i=0;i<2;i++){
-      for(int j=0;j<2;j++){
-        myPrintf("%d ",B[i][j]);
-      }
-      myPrintf("\r\n");
-    }
-    myPrintf("Matrix Multiplication Result:\r\n");
+    // myPrintf("Marix B:\n\r");
+    // for(int i=0;i<2;i++){
+    //   for(int j=0;j<2;j++){
+    //     myPrintf("%d ",B[i][j]);
+    //   }
+    //   myPrintf("\r\n");
+    // }
+    // myPrintf("Matrix Multiplication Result:\r\n");
 
-    for (int i = 0; i < 2; i++) {
-      for (int j = 0; j < 2; j++) {
-          int sum = 0;
-          for (int k = 0; k < 2; k++) {
-              sum += A[i][k] * B[k][j];
-          }
-          myPrintf("%d \t", sum);
-      }
-      myPrintf("\r\n");
-    }
+    // for (int i = 0; i < 2; i++) {
+    //   for (int j = 0; j < 2; j++) {
+    //       int sum = 0;
+    //       for (int k = 0; k < 2; k++) {
+    //           sum += A[i][k] * B[k][j];
+    //       }
+    //       myPrintf("%d \t", sum);
+    //   }
+    //   myPrintf("\r\n");
+    // }
 
   // Task 5
-  // int s = 100;
-  // int e = 999;
+  int s = 100;
+  int e = 999;
 
-  // myPrintf("Armstrong numbers between %d and %d are:\n\r", s, e);
-  // for (int i = s; i <= e; i++) {
-  //   int k = i;    
-  //     int fnum = k % 10;      
-  //     k = k / 10;
-  //     int snum = k % 10;
-  //     k = k / 10;
-  //     int tnum = k;
+  myPrintf("Armstrong numbers between %d and %d are:\n\r", s, e);
+  for (int i = s; i <= e; i++) {
+    int k = i;    
+      int fnum = k % 10;      
+      k = k / 10;
+      int snum = k % 10;
+      k = k / 10;
+      int tnum = k;
 
-  //     int armstrong = (tnum * tnum * tnum) + (snum * snum * snum) + (fnum * fnum * fnum);
+      int armstrong = (tnum * tnum * tnum) + (snum * snum * snum) + (fnum * fnum * fnum);
 
-  //     if (armstrong == i) {
-  //         myPrintf("%d\n\r", i);
-  //     }
-  // }
+      if (armstrong == i) {
+          myPrintf("%d\n\r", i);
+      }
+  }
 
   // 
   // /* USER CODE BEGIN 3 */
