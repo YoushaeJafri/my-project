@@ -18,7 +18,9 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-
+#include "stdarg.h"
+#include "stdio.h"
+#include "string.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -72,6 +74,19 @@ static void MX_USB_PCD_Init(void);
   * @brief  The application entry point.
   * @retval int
   */
+
+  void myPrintf(const char *fmt, ...)
+{
+    char buffer[128];
+    va_list args;
+    va_start(args, fmt);
+    int len = vsnprintf(buffer, sizeof(buffer), fmt, args);
+    va_end(args);
+    if (len > 0)
+    {
+        HAL_UART_Transmit(&huart2, (uint8_t *)buffer, len, HAL_MAX_DELAY);
+    }
+}
 int main(void)
 {
 
@@ -111,8 +126,9 @@ int main(void)
   {
 
     /* USER CODE END WHILE */
-  HAL_UART_Transmit(&huart2, (uint8_t *)"Hello, World!", 13, HAL_MAX_DELAY);
-    /* USER CODE BEGIN 3 */
+   int x = 42;
+    float y = 3.14f;
+    myPrintf("Value of x = %d, y = %f\r\n", x, y);    /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
 }
