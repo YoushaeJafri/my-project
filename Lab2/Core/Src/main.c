@@ -141,7 +141,7 @@ int main(void)
   //  float y = 3.14f;
   //  myPrintf("Value of x = %d, y = %.2f\r\n", x, y);    
   
-  Task 2
+  // Task 2
     myPrintf("(%d + %d)2 = %d", a, b, lhs);
     myPrintf("   %d2 + 2(%d)(%d) %d2 = %d\n\r", a, a, b, b, rhs);
 
