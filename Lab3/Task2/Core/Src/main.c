@@ -271,28 +271,23 @@ int main(void)
     pressed = HAL_GPIO_ReadPin(GPIOA , GPIO_PIN_0);
     if (pressed == 1){
       if (changed == 0){
-       
       
       HAL_Delay(20);
       pressed = HAL_GPIO_ReadPin(GPIOA , GPIO_PIN_0);      
       if (pressed){
         changed = 1;
-        if (j == id[i]){
-          i = i + 1;
-          j = 0;
-          if (i == 5){
-            i = 0;
-          }
+        
+        i = i + 1;
+        if (i == 5){
+          i = 0;
         }
-        else{
-          j = j + 1;
-        }
+        
       }      
     } }   
     else{
       changed = 0;
     }
-    displaynumber(j);
+    displaynumber(id[i]);
 
   }
   /* USER CODE END 3 */
