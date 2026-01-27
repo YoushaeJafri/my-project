@@ -18,7 +18,8 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "stm32f3xx_hal.h"
+#include <stdlib.h>
+
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -70,6 +71,8 @@ static void MX_USB_PCD_Init(void);
   * @brief  The application entry point.
   * @retval int
   */
+
+
 
 
 uint16_t apin = GPIO_PIN_1;
@@ -224,6 +227,7 @@ void displaynumber(uint8_t num){
   }
 }
 
+
 int main(void)
 {
 
@@ -252,52 +256,31 @@ int main(void)
   MX_I2C1_Init();
   MX_SPI1_Init();
   MX_USB_PCD_Init();
-  /* USER CODE BEGIN 2 */
 
-  /* USER CODE END 2 */
-
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */  
   uint8_t pressed = 0;
-  uint8_t presseda = 0;
   uint8_t changed = 0;
-  uint8_t changeda = 0;
+  uint8_t i = (rand() % 6) + 1;
 
-  uint8_t i = 0;  
   while (1)
-  {        
-    pressed = HAL_GPIO_ReadPin (GPIOA , GPIO_PIN_4 );
-  
+  {
+    pressed = HAL_GPIO_ReadPin(GPIOA , GPIO_PIN_0);
     if (pressed == 1){
       if (changed == 0){
-        HAL_Delay(20);
-        pressed = HAL_GPIO_ReadPin (GPIOA , GPIO_PIN_4 );      
-        if (pressed){
-          changed = 1;
-          i = i - 1;
-        }      
+      
+      HAL_Delay(20);
+      pressed = HAL_GPIO_ReadPin(GPIOA , GPIO_PIN_0);      
+      if (pressed){
+        changed = 1;
+        
+        i = (rand() % 6) + 1;
+      }      
     } }   
     else{
       changed = 0;
     }
-
-    
-    presseda = HAL_GPIO_ReadPin (GPIOA , GPIO_PIN_0 );
-
-    if (presseda == 1){
-      if (changeda == 0){
-        HAL_Delay(20);
-        presseda = HAL_GPIO_ReadPin (GPIOA , GPIO_PIN_0 );      
-        if (presseda){
-          changeda = 1;
-          i = i + 1;        
-        }      
-    } }   
-    else{
-      changeda = 0;
-    }
     displaynumber(i);
-}
+
+  }
 }
 
 /**
@@ -533,11 +516,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : B1_Pin PA4 */
-  GPIO_InitStruct.Pin = B1_Pin|GPIO_PIN_4;
+  /*Configure GPIO pin : B1_Pin */
+  GPIO_InitStruct.Pin = B1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PA1 PA2 PA3 */
   GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3;
