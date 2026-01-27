@@ -190,8 +190,6 @@ void displaynumber(uint8_t num){
     resetPin(ggroup , gpin); 
   }
   else if (num == 11){    
-    resetPin(agroup , apin); 
-    resetPin(bgroup , bpiin); 
     resetPin(fgroup , fpin); 
     resetPin(egroup , epin); 
     resetPin(dgroup , dpin); 
