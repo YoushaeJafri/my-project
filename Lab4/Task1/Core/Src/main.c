@@ -124,9 +124,7 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-    HAL_GPIO_WritePin(GPIOE, GPIO_PIN_8, GPIO_PIN_SET);
-    delay_ms(1000);
-    HAL_GPIO_WritePin(GPIOE, GPIO_PIN_8, GPIO_PIN_RESET);
+    HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_8);
     delay_ms(1000);
     /* USER CODE BEGIN 3 */
   }
