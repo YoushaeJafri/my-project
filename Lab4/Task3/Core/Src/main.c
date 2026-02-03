@@ -72,10 +72,25 @@ static void MX_USB_PCD_Init(void);
   * @brief  The application entry point.
   * @retval int
   */
+int countA = 0;
 
-  void HAL_TIM_PeriodElapsedCallback ( TIM_HandleTypeDef *htim) {
+void HAL_TIM_PeriodElapsedCallback ( TIM_HandleTypeDef *htim) {
   if (htim -> Instance == TIM2) {
-    HAL_GPIO_TogglePin (GPIOE , GPIO_PIN_8);
+    countA++;
+
+    if (countA % 100 == 0) {
+      HAL_GPIO_TogglePin (GPIOE , GPIO_PIN_8);
+    } 
+
+    if (countA % 200 == 0) {
+      HAL_GPIO_TogglePin (GPIOE , GPIO_PIN_9);
+    } 
+
+    if (countA % 500 == 0) {
+      countA = 0;
+      HAL_GPIO_TogglePin (GPIOE , GPIO_PIN_10);
+    } 
+    
   }
 }
 
@@ -281,9 +296,9 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 47999;
+  htim2.Init.Prescaler = 4799;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 1;
+  htim2.Init.Period = 9;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
