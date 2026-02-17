@@ -20,6 +20,7 @@
 #include "main.h"
 #include <string.h>
 #include "stm32f3xx_hal.h"
+#include "stm32f3xx_hal_def.h"
 #include <stdio.h>
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -74,6 +75,16 @@ static void MX_USART1_UART_Init(void);
   * @brief  The application entry point.
   * @retval int
   */
+
+uint8_t spiSendAndReceive(uint8_t data) {
+    uint8_t receivedData;
+    HAL_GPIO_WritePin (GPIOE , GPIO_PIN_3 , GPIO_PIN_RESET);
+    HAL_SPI_Transmit(&hspi1, &data, sizeof(data), HAL_MAX_DELAY);
+    HAL_SPI_Receive(&hspi1, &receivedData, sizeof(receivedData), HAL_MAX_DELAY);
+    HAL_GPIO_WritePin (GPIOE , GPIO_PIN_3 , GPIO_PIN_SET);
+    return receivedData;
+}
+
 int main(void)
 {
 
@@ -111,22 +122,14 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 
   uint8_t tx_buffer = 0b10001111;
-  uint8_t rx_buffer = 0;
+  uint8_t rx_buffer = spiSendAndReceive(tx_buffer);
   
-  HAL_GPIO_WritePin (GPIOE , GPIO_PIN_3 , GPIO_PIN_RESET);
-
-  HAL_SPI_Transmit (& hspi1 , &tx_buffer , sizeof(tx_buffer) , 100 );
-  HAL_SPI_Receive (& hspi1 , &rx_buffer , sizeof(rx_buffer) , 100 );
-  
-  char msg[20];
+  char msg[11];
   for (int i = 7; i >= 0; i--) {
       sprintf(msg + strlen(msg), "%d", (rx_buffer >> i) & 1);
   }
   strcat(msg, "\r\n");
-  HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
-
-  HAL_GPIO_WritePin (GPIOE , GPIO_PIN_3 , GPIO_PIN_SET);
-
+  HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
 
   while (1)
   {
