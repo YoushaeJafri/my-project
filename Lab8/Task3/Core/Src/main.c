@@ -78,31 +78,42 @@ static void MX_USART1_UART_Init(void);
   * @brief  The application entry point.
   * @retval int
   */
-uint8_t rxData;
-void spiSendAndReceiveIT(uint8_t data) {
-    HAL_GPIO_WritePin (GPIOE , GPIO_PIN_3 , GPIO_PIN_RESET);
-    HAL_SPI_Transmit_IT(&hspi1, &data, sizeof(data));
-    HAL_SPI_Receive_IT(&hspi1, &rxData, sizeof(rxData));
-}
+uint8_t OUT_X_L;
+uint8_t OUT_X_H;
+uint8_t OUT_Y_L;
+uint8_t OUT_Y_H;
+uint8_t OUT_Z_L;
+uint8_t OUT_Z_H;
+uint8_t OUT_TEMP;
 
-# define CTRL_REG1 0x20
-# define CTRL_REG1_VAL 0b00001111
+#define CTRL_REG1 0x20
+#define OUT_TEMP_REG 0x26
+# define CTRL_REG1_VAL 0b10001111
 void gyro_init ()
 {
-  uint8_t tx [2] = { CTRL_REG1 , CTRL_REG1_VAL };
-  HAL_GPIO_WritePin (GPIOE , GPIO_PIN_3 , GPIO_PIN_RESET );
-  HAL_SPI_Transmit (& hspi1 , tx , 2, HAL_MAX_DELAY );
-  HAL_GPIO_WritePin (GPIOE , GPIO_PIN_3 , GPIO_PIN_SET );
+  uint8_t tx[2];
+
+  tx[0] = CTRL_REG1 & 0x7F;
+  tx[1] = CTRL_REG1_VAL;
+
+  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_RESET);
+  HAL_SPI_Transmit(&hspi1, tx, 2, HAL_MAX_DELAY);
+  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_SET);
 }
 
-void HAL_SPI_RxCpltCallback ( SPI_HandleTypeDef *hspi){
-    if (hspi->Instance == SPI1) {
-      HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_SET);
+uint8_t read(uint8_t reg)
+{
+    uint8_t tx[2];
+    uint8_t rx[2];
 
-      char buffer[20];
-      sprintf(buffer, "%d,%d\r\n", rxData, rxData);
-      HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), HAL_MAX_DELAY);
-    }
+    tx[0] = reg | 0x80;
+    tx[1] = 0x00;         
+
+    HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_RESET);
+    HAL_SPI_TransmitReceive(&hspi1, tx, rx, 2, HAL_MAX_DELAY);
+    HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_SET);
+
+    return rx[1];
 }
 
 int main(void)
@@ -116,7 +127,7 @@ int main(void)
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
-
+  HAL_Delay(100);
   /* USER CODE BEGIN Init */
 
   /* USER CODE END Init */
@@ -146,11 +157,38 @@ int main(void)
 
   while (1)
   {
-    /* USER CODE END WHILE */
-  uint8_t dataToSend = 0x26 | 0x80;
-  spiSendAndReceiveIT(dataToSend);
-  HAL_Delay(100);
-    /* USER CODE BEGIN 3 */
+    OUT_X_L = read(0x28);
+    OUT_X_H = read(0x29);
+    OUT_Y_L = read(0x2A);
+    OUT_Y_H = read(0x2B);
+    OUT_Z_L = read(0x2C);
+    OUT_Z_H = read(0x2D);
+    OUT_TEMP = read(OUT_TEMP_REG);
+
+    int16_t x = (int16_t)((OUT_X_H << 8) | OUT_X_L);
+    int16_t y = (int16_t)((OUT_Y_H << 8) | OUT_Y_L);
+    int16_t z = (int16_t)((OUT_Z_H << 8) | OUT_Z_L);
+
+    int x_cdps = (x * 875) / 100;
+    int y_cdps = (y * 875) / 100;
+    int z_cdps = (z * 875) / 100;
+    
+    int x_int = x_cdps / 100;
+    int x_frac = (x_cdps < 0 ? -x_cdps : x_cdps) % 100;
+    int y_int = y_cdps / 100;
+    int y_frac = (y_cdps < 0 ? -y_cdps : y_cdps) % 100;
+    int z_int = z_cdps / 100;
+    int z_frac = (z_cdps < 0 ? -z_cdps : z_cdps) % 100;
+    
+    int8_t temp_raw = (int8_t)OUT_TEMP;
+    int temperature = temp_raw;
+
+    char buffer[100];
+    sprintf(buffer, "%d,%d.%02d,%d.%02d,%d.%02d\r\n",temperature, x_int, x_frac, y_int, y_frac, z_int, z_frac);
+
+    HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), HAL_MAX_DELAY);
+
+    HAL_Delay(100);
   }
   /* USER CODE END 3 */
 }
