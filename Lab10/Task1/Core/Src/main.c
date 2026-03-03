@@ -124,7 +124,7 @@ int main(void)
   int* arr2 = (int*)calloc(n, sizeof(int));
   if (arr != NULL){
     for (int i = 0; i < n; i++){
-      arr2[i] = 0;
+      if (arr2[i])
       arr2[i] = i + 1;
     }
   }
