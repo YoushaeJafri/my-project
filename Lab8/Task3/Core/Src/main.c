@@ -157,6 +157,32 @@ int main(void)
 
   while (1)
   {
+    OUT_X_L = read(0x28);
+    OUT_X_H = read(0x29);
+    OUT_Y_L = read(0x2A);
+    OUT_Y_H = read(0x2B);
+    OUT_Z_L = read(0x2C);
+    OUT_Z_H = read(0x2D);
+    OUT_TEMP = read(OUT_TEMP_REG);
+
+    int16_t x = (int16_t)((OUT_X_H << 8) | OUT_X_L);
+    int16_t y = (int16_t)((OUT_Y_H << 8) | OUT_Y_L);
+    int16_t z = (int16_t)((OUT_Z_H << 8) | OUT_Z_L);
+
+    int x_cdps = (x * 875) / 100;
+    int y_cdps = (y * 875) / 100;
+    int z_cdps = (z * 875) / 100;
+    
+    int x_int = x_cdps / 100;
+    int x_frac = (x_cdps < 0 ? -x_cdps : x_cdps) % 100;
+    int y_int = y_cdps / 100;
+    int y_frac = (y_cdps < 0 ? -y_cdps : y_cdps) % 100;
+    int z_int = z_cdps / 100;
+    int z_frac = (z_cdps < 0 ? -z_cdps : z_cdps) % 100;
+    
+    int8_t temp_raw = (int8_t)OUT_TEMP;
+    int temperature = temp_raw;
+
     char buffer[100];
     sprintf(buffer, "%d,%d.%02d,%d.%02d,%d.%02d\r\n",temperature, x_int, x_frac, y_int, y_frac, z_int, z_frac);
 
