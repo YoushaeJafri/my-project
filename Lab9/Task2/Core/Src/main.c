@@ -19,6 +19,8 @@
 /* Includes ------------------------------------------------------------------*/
 
 #include "main.h"
+#include "stm32f3xx_hal.h"
+#include "stm32f3xx_hal_spi.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -76,23 +78,71 @@ static void MX_USART1_UART_Init(void);
   * @retval int
   */
 
-uint8_t OUT_X_L;
-uint8_t OUT_X_H;
-uint8_t OUT_Y_L;
-uint8_t OUT_Y_H;
-uint8_t OUT_Z_L;
-uint8_t OUT_Z_H;
-uint8_t OUT_TEMP;
+struct gyro{
+  uint8_t OUT_X_L;
+  uint8_t OUT_X_H;
+  uint8_t OUT_Y_L;
+  uint8_t OUT_Y_H;
+  uint8_t OUT_Z_L;
+  uint8_t OUT_Z_H;
+  uint8_t OUT_TEMP;
 
-float x_dps;
-float y_dps;
-float z_dps;
-int temperature;
+  float x_dps;
+  float y_dps;
+  float z_dps;
+  int temperature;
+  float xoffg, yoffg, zoffg;
+};
+
+struct accel{
+  float accel_x;
+  float accel_y;
+  float accel_z;
+  float xoff;
+  float yoff;
+  float zoff;
+};
+
+struct gyro gyro_data;
+struct accel accel_data;
 
 #define LSM_ADDR (0x19 << 1)
 #define CTRL_REG1 0x20
 #define OUT_TEMP_REG 0x26
 # define CTRL_REG1_VAL 0b10001111
+
+
+void Init_LSM(){
+  HAL_I2C_Mem_Write(&hi2c1, LSM_ADDR, 0x20, I2C_MEMADD_SIZE_8BIT, (uint8_t[]){0x67}, 1, HAL_MAX_DELAY);
+  HAL_I2C_Mem_Write(&hi2c1, LSM_ADDR, 0x23, I2C_MEMADD_SIZE_8BIT, (uint8_t[]){0x00}, 1, HAL_MAX_DELAY);
+}
+
+void Read_LSM() {
+  uint8_t low, high;
+  int16_t raw_x = 0, raw_y = 0, raw_z = 0;
+  
+  HAL_I2C_Mem_Read(&hi2c1, LSM_ADDR, 0x28 | 0x80, I2C_MEMADD_SIZE_8BIT, &low, 1, HAL_MAX_DELAY);
+  HAL_I2C_Mem_Read(&hi2c1, LSM_ADDR, 0x29 | 0x80, I2C_MEMADD_SIZE_8BIT, &high, 1, HAL_MAX_DELAY);
+  raw_x = (int16_t)((high << 8) | low);
+  
+  HAL_I2C_Mem_Read(&hi2c1, LSM_ADDR, 0x2A | 0x80, I2C_MEMADD_SIZE_8BIT, &low, 1, HAL_MAX_DELAY);
+  HAL_I2C_Mem_Read(&hi2c1, LSM_ADDR, 0x2B | 0x80, I2C_MEMADD_SIZE_8BIT, &high, 1, HAL_MAX_DELAY);
+  raw_y = (int16_t)((high << 8) | low);
+  
+  HAL_I2C_Mem_Read(&hi2c1, LSM_ADDR, 0x2C | 0x80, I2C_MEMADD_SIZE_8BIT, &low, 1, HAL_MAX_DELAY);
+  HAL_I2C_Mem_Read(&hi2c1, LSM_ADDR, 0x2D | 0x80, I2C_MEMADD_SIZE_8BIT, &high, 1, HAL_MAX_DELAY);
+  raw_z = (int16_t)((high << 8) | low);
+  
+  accel_data.accel_x = (float)(raw_x) * 3.9f / 1000;
+  accel_data.accel_y = (float)(raw_y) * 3.9f / 1000;
+  accel_data.accel_z = (float)(raw_z) * 3.9f / 1000;
+
+  accel_data.accel_x -= accel_data.xoff;
+  accel_data.accel_y -= accel_data.yoff;
+  accel_data.accel_z -= accel_data.zoff;
+}
+
+
 void gyro_init ()
 {
   uint8_t tx[2];
@@ -114,82 +164,59 @@ uint8_t read(uint8_t reg)
     tx[1] = 0x00;         
 
     HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_RESET);
-    HAL_SPI_TransmitReceive(&hspi1, tx, rx, 2, HAL_MAX_DELAY);
+    HAL_SPI_TransmitReceive(&hspi1, tx, rx, 2, HAL_MAX_DELAY);    
     HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_SET);
 
     return rx[1];
 }
 
-void Init_LSM(){
-  HAL_I2C_Mem_Write(&hi2c1, LSM_ADDR, 0x20, I2C_MEMADD_SIZE_8BIT, (uint8_t[]){0x67}, 1, HAL_MAX_DELAY);
-  HAL_I2C_Mem_Write(&hi2c1, LSM_ADDR, 0x23, I2C_MEMADD_SIZE_8BIT, (uint8_t[]){0x00}, 1, HAL_MAX_DELAY);
-}
-float accel_x, accel_y, accel_z;
-float xoff = 0, yoff = 0, zoff = 0;
+void readGyro() {
+  gyro_data.OUT_X_L = read(0x28);
+  gyro_data.OUT_X_H = read(0x29);
+  gyro_data.OUT_Y_L = read(0x2A);
+  gyro_data.OUT_Y_H = read(0x2B);
+  gyro_data.OUT_Z_L = read(0x2C);
+  gyro_data.OUT_Z_H = read(0x2D);
 
-void Read_LSM() {
-  uint8_t low, high;
-  int16_t raw_x = 0, raw_y = 0, raw_z = 0;
-  
-  HAL_I2C_Mem_Read(&hi2c1, LSM_ADDR, 0x28 | 0x80, I2C_MEMADD_SIZE_8BIT, &low, 1, HAL_MAX_DELAY);
-  HAL_I2C_Mem_Read(&hi2c1, LSM_ADDR, 0x29 | 0x80, I2C_MEMADD_SIZE_8BIT, &high, 1, HAL_MAX_DELAY);
-  raw_x = (int16_t)((high << 8) | low);
-  
-  HAL_I2C_Mem_Read(&hi2c1, LSM_ADDR, 0x2A | 0x80, I2C_MEMADD_SIZE_8BIT, &low, 1, HAL_MAX_DELAY);
-  HAL_I2C_Mem_Read(&hi2c1, LSM_ADDR, 0x2B | 0x80, I2C_MEMADD_SIZE_8BIT, &high, 1, HAL_MAX_DELAY);
-  raw_y = (int16_t)((high << 8) | low);
-  
-  HAL_I2C_Mem_Read(&hi2c1, LSM_ADDR, 0x2C | 0x80, I2C_MEMADD_SIZE_8BIT, &low, 1, HAL_MAX_DELAY);
-  HAL_I2C_Mem_Read(&hi2c1, LSM_ADDR, 0x2D | 0x80, I2C_MEMADD_SIZE_8BIT, &high, 1, HAL_MAX_DELAY);
-  raw_z = (int16_t)((high << 8) | low);
-  
-  accel_x = (float)(raw_x) * 3.9f / 1000;
-  accel_y = (float)(raw_y) * 3.9f / 1000;
-  accel_z = (float)(raw_z) * 3.9f / 1000;
+  int16_t x = (int16_t)((gyro_data.OUT_X_H << 8) | gyro_data.OUT_X_L);
+  int16_t y = (int16_t)((gyro_data.OUT_Y_H << 8) | gyro_data.OUT_Y_L);
+  int16_t z = (int16_t)((gyro_data.OUT_Z_H << 8) | gyro_data.OUT_Z_L);
 
-  accel_x -= xoff;
-  accel_y -= yoff;
-  accel_z -= zoff;
+  gyro_data.x_dps = x * 0.00875f;
+  gyro_data.y_dps = y * 0.00875f;
+  gyro_data.z_dps = z * 0.00875f;
+  
+  gyro_data.x_dps -= gyro_data.xoffg;
+  gyro_data.y_dps -= gyro_data.yoffg;
+  gyro_data.z_dps -= gyro_data.zoffg;
 }
 
 void Offset_LSM(){
   float xofft = 0, yofft = 0, zofft = 0;
+  float xofftg = 0, yofftg = 0, zofftg = 0;
+
   for (int i = 0; i < 20; i++) {
     Read_LSM();
-    xofft += accel_x;
-    yofft += accel_y;
-    zofft += accel_z;
+    readGyro();
+    xofft += accel_data.accel_x;
+    yofft += accel_data.accel_y;
+    zofft += accel_data.accel_z;
+    xofftg += gyro_data.x_dps;
+    yofftg += gyro_data.y_dps;
+    zofftg += gyro_data.z_dps;
     HAL_Delay(10);
   }
-  xoff = xofft / 20;
-  yoff = yofft / 20;
-  zoff = zofft / 20;
-}
-
-void readGyro() {
-  OUT_X_L = read(0x28);
-  OUT_X_H = read(0x29);
-  OUT_Y_L = read(0x2A);
-  OUT_Y_H = read(0x2B);
-  OUT_Z_L = read(0x2C);
-  OUT_Z_H = read(0x2D);
-  OUT_TEMP = read(OUT_TEMP_REG);
-
-  int16_t x = (int16_t)((OUT_X_H << 8) | OUT_X_L);
-  int16_t y = (int16_t)((OUT_Y_H << 8) | OUT_Y_L);
-  int16_t z = (int16_t)((OUT_Z_H << 8) | OUT_Z_L);
-
-  x_dps = x * 0.00875f;
-  y_dps = y * 0.00875f;
-  z_dps = z * 0.00875f;
-  
-  int8_t temp_raw = (int8_t)OUT_TEMP;
-  temperature = temp_raw;
+  accel_data.xoff = xofft / 20;
+  accel_data.yoff = yofft / 20;
+  accel_data.zoff = zofft / 20;
+  gyro_data.xoffg = xofftg / 20;
+  gyro_data.yoffg = yofftg / 20;
+  gyro_data.zoffg = zofftg / 20;
 }
 
 void Print_LSM() {
   char output[128];
-  sprintf(output, "%f,%f\r\n", x_dps, accel_x);
+  sprintf(output, "%f,%f\r\n", gyro_data.x_dps, accel_data.accel_x);
   HAL_UART_Transmit(&huart1, (uint8_t*)output, strlen(output), HAL_MAX_DELAY);
 }
 
@@ -230,6 +257,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 
   Init_LSM();
+  gyro_init();
   Offset_LSM();
 
   while (1)
@@ -238,7 +266,7 @@ int main(void)
     readGyro();
     Print_LSM();
     
-    HAL_Delay(50);
+    HAL_Delay(100);
   }
   /* USER CODE END 3 */
 }
@@ -360,9 +388,9 @@ static void MX_SPI1_Init(void)
   hspi1.Instance = SPI1;
   hspi1.Init.Mode = SPI_MODE_MASTER;
   hspi1.Init.Direction = SPI_DIRECTION_2LINES;
-  hspi1.Init.DataSize = SPI_DATASIZE_4BIT;
-  hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
-  hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
+  hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
+  hspi1.Init.CLKPolarity = SPI_POLARITY_HIGH;
+  hspi1.Init.CLKPhase = SPI_PHASE_2EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
   hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
