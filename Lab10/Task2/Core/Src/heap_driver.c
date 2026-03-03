@@ -44,23 +44,7 @@ void* heap_alloc(size_t size){
     }
     return NULL;
 }
-int blocksNeeded = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
-    int consecutiveFree = 0;
-    for (int i = 0; i < BLOCK_COUNT; i++) {
-        if (i >= BLOCK_COUNT) {
-            break;
-        }
-        if (allocation_bitmap[i] == 0){
-            consecutiveFree++;
-            if (consecutiveFree == blocksNeeded) {
-                int start_block = i - blocksNeeded + 1;
-                for (int j = start_block; j <= i; j++) {
-                    allocation_bitmap[j] = 1;
-                }
-                return (void*)(HEAP_START_ADDR + start_block * BLOCK_SIZE);
-            }
-        } else {
 void heap_free(void* ptr) {
     if (ptr == NULL) {
         return;
