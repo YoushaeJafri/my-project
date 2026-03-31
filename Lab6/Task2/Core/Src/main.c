@@ -18,7 +18,9 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-
+#include <stdio.h>
+#include <string.h>
+#include <stdint.h>
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -46,10 +48,16 @@ SPI_HandleTypeDef hspi1;
 
 TIM_HandleTypeDef htim2;
 
+UART_HandleTypeDef huart1;
+
 PCD_HandleTypeDef hpcd_USB_FS;
-
+float frequency = 0;
 /* USER CODE BEGIN PV */
-
+int __io_putchar(int ch)
+{
+    HAL_UART_Transmit(&huart1, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
+    return ch;
+}
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -58,9 +66,38 @@ static void MX_GPIO_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_USART1_UART_Init(void);
 static void MX_USB_PCD_Init(void);
 /* USER CODE BEGIN PFP */
+uint32_t ic_val1 = 0;
+uint32_t ic_val2 = 0;
+uint32_t diff = 0;
+uint8_t is_first = 0;
 
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
+{
+    if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)
+    {
+        if (is_first == 0)
+        {
+            ic_val1 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+            is_first = 1;
+        }
+        else
+        {
+            ic_val2 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+
+            if (ic_val2 > ic_val1)
+                diff = ic_val2 - ic_val1;
+            else
+                diff = (0xFFFFFFFF - ic_val1) + ic_val2;
+
+            frequency = 666666.67 / diff;
+
+            is_first = 0;
+        }
+    }
+}
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -100,9 +137,10 @@ int main(void)
   MX_I2C1_Init();
   MX_SPI1_Init();
   MX_TIM2_Init();
+  MX_USART1_UART_Init();
   MX_USB_PCD_Init();
   /* USER CODE BEGIN 2 */
-
+  HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -110,7 +148,8 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-
+    printf("Frequency: %.2f Hz\r\n", frequency);
+    HAL_Delay(500);
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -155,7 +194,9 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USB|RCC_PERIPHCLK_I2C1;
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USB|RCC_PERIPHCLK_USART1
+                              |RCC_PERIPHCLK_I2C1;
+  PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK2;
   PeriphClkInit.I2c1ClockSelection = RCC_I2C1CLKSOURCE_HSI;
   PeriphClkInit.USBClockSelection = RCC_USBCLKSOURCE_PLL;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
@@ -180,7 +221,7 @@ static void MX_I2C1_Init(void)
 
   /* USER CODE END I2C1_Init 1 */
   hi2c1.Instance = I2C1;
-  hi2c1.Init.Timing = 0x2000090E;
+  hi2c1.Init.Timing = 0x00201D2B;
   hi2c1.Init.OwnAddress1 = 0;
   hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
   hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
@@ -264,6 +305,7 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 0 */
 
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
   TIM_IC_InitTypeDef sConfigIC = {0};
 
@@ -276,6 +318,15 @@ static void MX_TIM2_Init(void)
   htim2.Init.Period = 4294967295;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
   if (HAL_TIM_IC_Init(&htim2) != HAL_OK)
   {
     Error_Handler();
@@ -297,6 +348,41 @@ static void MX_TIM2_Init(void)
   /* USER CODE BEGIN TIM2_Init 2 */
 
   /* USER CODE END TIM2_Init 2 */
+
+}
+
+/**
+  * @brief USART1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART1_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART1_Init 0 */
+
+  /* USER CODE END USART1_Init 0 */
+
+  /* USER CODE BEGIN USART1_Init 1 */
+
+  /* USER CODE END USART1_Init 1 */
+  huart1.Instance = USART1;
+  huart1.Init.BaudRate = 115200;
+  huart1.Init.WordLength = UART_WORDLENGTH_8B;
+  huart1.Init.StopBits = UART_STOPBITS_1;
+  huart1.Init.Parity = UART_PARITY_NONE;
+  huart1.Init.Mode = UART_MODE_TX_RX;
+  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart1.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart1.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART1_Init 2 */
+
+  /* USER CODE END USART1_Init 2 */
 
 }
 
@@ -348,6 +434,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOF_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
@@ -355,10 +442,8 @@ static void MX_GPIO_Init(void)
                           |LD7_Pin|LD9_Pin|LD10_Pin|LD8_Pin
                           |LD6_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : DRDY_Pin MEMS_INT3_Pin MEMS_INT4_Pin MEMS_INT1_Pin
-                           MEMS_INT2_Pin */
-  GPIO_InitStruct.Pin = DRDY_Pin|MEMS_INT3_Pin|MEMS_INT4_Pin|MEMS_INT1_Pin
-                          |MEMS_INT2_Pin;
+  /*Configure GPIO pins : DRDY_Pin MEMS_INT3_Pin MEMS_INT4_Pin */
+  GPIO_InitStruct.Pin = DRDY_Pin|MEMS_INT3_Pin|MEMS_INT4_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_EVT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
@@ -379,6 +464,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PD1 */
+  GPIO_InitStruct.Pin = GPIO_PIN_1;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
