@@ -67,7 +67,7 @@ static void MX_USB_PCD_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_TIM3_Init(void);
 /* USER CODE BEGIN PFP */
-#define SAMPLE_SIZE 5
+#define SAMPLE_SIZE 10
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -121,8 +121,8 @@ int main(void)
   
   HAL_TIM_PWM_Start (&htim2 , TIM_CHANNEL_1 );
   HAL_TIM_PWM_Start (&htim2 , TIM_CHANNEL_2 );
-  __HAL_TIM_SET_COMPARE (&htim2 , TIM_CHANNEL_1 , 1000 );
-  __HAL_TIM_SET_COMPARE (&htim2 , TIM_CHANNEL_2 , 1000 );
+  __HAL_TIM_SET_COMPARE (&htim2 , TIM_CHANNEL_1 , 500 );
+  __HAL_TIM_SET_COMPARE (&htim2 , TIM_CHANNEL_2 , 500 );
   // HAL_TIM_PWM_Stop (&htim2 , TIM_CHANNEL_1 );
   // HAL_TIM_PWM_Stop (&htim2 , TIM_CHANNEL_2 );
 
@@ -155,17 +155,17 @@ int main(void)
 
         if (ticks != 0)
         {
-            float freq = 100000.0f / ticks;   // because prescaler = 9
+            float freq = 1000000.0f / ticks;
             sum += freq;
         }
     }
 
     float avg_freq = sum / SAMPLE_SIZE;
-    float rpm = (60.0f * avg_freq) / 330;
+    float rpm = (60.0f * avg_freq) / 330.0f;
 
     printf("Freq: %.2f Hz | RPM: %.2f\r\n", avg_freq, rpm);
 
-    HAL_Delay(100);
+    HAL_Delay(10);
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */

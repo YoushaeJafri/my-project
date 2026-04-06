@@ -47,7 +47,7 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
 )
-    target_link_options(${PROJECT_NAME} PRIVATE -u _printf_float)
+target_link_options(${PROJECT_NAME} PRIVATE -u _printf_float)
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
