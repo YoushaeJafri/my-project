@@ -17,13 +17,11 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
-
 #include "main.h"
-#include "stm32f3xx_hal.h"
-#include "stm32f3xx_hal_spi.h"
+#include "IMU.h"
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
-
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -49,11 +47,16 @@ I2C_HandleTypeDef hi2c1;
 
 SPI_HandleTypeDef hspi1;
 
+TIM_HandleTypeDef htim1;
+TIM_HandleTypeDef htim2;
+
 UART_HandleTypeDef huart1;
 
 PCD_HandleTypeDef hpcd_USB_FS;
 
 /* USER CODE BEGIN PV */
+IMU_Angles_t imu_angles;
+char uart_msg[96];
 
 /* USER CODE END PV */
 
@@ -62,8 +65,10 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_SPI1_Init(void);
-static void MX_USB_PCD_Init(void);
+static void MX_TIM1_Init(void);
+static void MX_TIM2_Init(void);
 static void MX_USART1_UART_Init(void);
+static void MX_USB_PCD_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -77,149 +82,6 @@ static void MX_USART1_UART_Init(void);
   * @brief  The application entry point.
   * @retval int
   */
-
-struct gyro{
-  uint8_t OUT_X_L;
-  uint8_t OUT_X_H;
-  uint8_t OUT_Y_L;
-  uint8_t OUT_Y_H;
-  uint8_t OUT_Z_L;
-  uint8_t OUT_Z_H;
-  uint8_t OUT_TEMP;
-
-  float x_dps;
-  float y_dps;
-  float z_dps;
-  int temperature;
-  float xoffg, yoffg, zoffg;
-};
-
-struct accel{
-  float accel_x;
-  float accel_y;
-  float accel_z;
-  float xoff;
-  float yoff;
-  float zoff;
-};
-
-struct gyro gyro_data;
-struct accel accel_data;
-
-#define LSM_ADDR (0x19 << 1)
-#define CTRL_REG1 0x20
-#define OUT_TEMP_REG 0x26
-# define CTRL_REG1_VAL 0b10001111
-
-
-void Init_LSM(){
-  HAL_I2C_Mem_Write(&hi2c1, LSM_ADDR, 0x20, I2C_MEMADD_SIZE_8BIT, (uint8_t[]){0x67}, 1, HAL_MAX_DELAY);
-  HAL_I2C_Mem_Write(&hi2c1, LSM_ADDR, 0x23, I2C_MEMADD_SIZE_8BIT, (uint8_t[]){0x00}, 1, HAL_MAX_DELAY);
-}
-
-void Read_LSM() {
-  uint8_t low, high;
-  int16_t raw_x = 0, raw_y = 0, raw_z = 0;
-  
-  HAL_I2C_Mem_Read(&hi2c1, LSM_ADDR, 0x28 | 0x80, I2C_MEMADD_SIZE_8BIT, &low, 1, HAL_MAX_DELAY);
-  HAL_I2C_Mem_Read(&hi2c1, LSM_ADDR, 0x29 | 0x80, I2C_MEMADD_SIZE_8BIT, &high, 1, HAL_MAX_DELAY);
-  raw_x = (int16_t)((high << 8) | low);
-  
-  HAL_I2C_Mem_Read(&hi2c1, LSM_ADDR, 0x2A | 0x80, I2C_MEMADD_SIZE_8BIT, &low, 1, HAL_MAX_DELAY);
-  HAL_I2C_Mem_Read(&hi2c1, LSM_ADDR, 0x2B | 0x80, I2C_MEMADD_SIZE_8BIT, &high, 1, HAL_MAX_DELAY);
-  raw_y = (int16_t)((high << 8) | low);
-  
-  HAL_I2C_Mem_Read(&hi2c1, LSM_ADDR, 0x2C | 0x80, I2C_MEMADD_SIZE_8BIT, &low, 1, HAL_MAX_DELAY);
-  HAL_I2C_Mem_Read(&hi2c1, LSM_ADDR, 0x2D | 0x80, I2C_MEMADD_SIZE_8BIT, &high, 1, HAL_MAX_DELAY);
-  raw_z = (int16_t)((high << 8) | low);
-  
-  accel_data.accel_x = (float)(raw_x) * 3.9f / 1000;
-  accel_data.accel_y = (float)(raw_y) * 3.9f / 1000;
-  accel_data.accel_z = (float)(raw_z) * 3.9f / 1000;
-
-  accel_data.accel_x -= accel_data.xoff;
-  accel_data.accel_y -= accel_data.yoff;
-  accel_data.accel_z -= accel_data.zoff;
-}
-
-
-void gyro_init ()
-{
-  uint8_t tx[2];
-
-  tx[0] = CTRL_REG1 & 0x7F;
-  tx[1] = CTRL_REG1_VAL;
-
-  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_RESET);
-  HAL_SPI_Transmit(&hspi1, tx, 2, HAL_MAX_DELAY);
-  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_SET);
-}
-
-uint8_t read(uint8_t reg)
-{
-    uint8_t tx[2];
-    uint8_t rx[2];
-
-    tx[0] = reg | 0x80;
-    tx[1] = 0x00;         
-
-    HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_RESET);
-    HAL_SPI_TransmitReceive(&hspi1, tx, rx, 2, HAL_MAX_DELAY);    
-    HAL_GPIO_WritePin(GPIOE, GPIO_PIN_3, GPIO_PIN_SET);
-
-    return rx[1];
-}
-
-void readGyro() {
-  gyro_data.OUT_X_L = read(0x28);
-  gyro_data.OUT_X_H = read(0x29);
-  gyro_data.OUT_Y_L = read(0x2A);
-  gyro_data.OUT_Y_H = read(0x2B);
-  gyro_data.OUT_Z_L = read(0x2C);
-  gyro_data.OUT_Z_H = read(0x2D);
-
-  int16_t x = (int16_t)((gyro_data.OUT_X_H << 8) | gyro_data.OUT_X_L);
-  int16_t y = (int16_t)((gyro_data.OUT_Y_H << 8) | gyro_data.OUT_Y_L);
-  int16_t z = (int16_t)((gyro_data.OUT_Z_H << 8) | gyro_data.OUT_Z_L);
-
-  gyro_data.x_dps = x * 0.00875f;
-  gyro_data.y_dps = y * 0.00875f;
-  gyro_data.z_dps = z * 0.00875f;
-  
-  gyro_data.x_dps -= gyro_data.xoffg;
-  gyro_data.y_dps -= gyro_data.yoffg;
-  gyro_data.z_dps -= gyro_data.zoffg;
-}
-
-void Offset_LSM(){
-  float xofft = 0, yofft = 0, zofft = 0;
-  float xofftg = 0, yofftg = 0, zofftg = 0;
-
-  for (int i = 0; i < 20; i++) {
-    Read_LSM();
-    readGyro();
-    xofft += accel_data.accel_x;
-    yofft += accel_data.accel_y;
-    zofft += accel_data.accel_z;
-    xofftg += gyro_data.x_dps;
-    yofftg += gyro_data.y_dps;
-    zofftg += gyro_data.z_dps;
-    HAL_Delay(10);
-  }
-  accel_data.xoff = xofft / 20;
-  accel_data.yoff = yofft / 20;
-  accel_data.zoff = zofft / 20;
-  gyro_data.xoffg = xofftg / 20;
-  gyro_data.yoffg = yofftg / 20;
-  gyro_data.zoffg = zofftg / 20;
-}
-
-void Print_LSM() {
-  char output[128];
-  sprintf(output, "%f,%f\r\n", gyro_data.x_dps, accel_data.accel_x);
-  HAL_UART_Transmit(&huart1, (uint8_t*)output, strlen(output), HAL_MAX_DELAY);
-}
-
 int main(void)
 {
 
@@ -247,26 +109,38 @@ int main(void)
   MX_GPIO_Init();
   MX_I2C1_Init();
   MX_SPI1_Init();
+  MX_TIM1_Init();
+  MX_TIM2_Init();
   MX_USART1_UART_Init();
   MX_USB_PCD_Init();
   /* USER CODE BEGIN 2 */
+  if (IMU_Init() != 0)
+  {
+    Error_Handler();
+  }
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-
-  Init_LSM();
-  gyro_init();
-  Offset_LSM();
-
   while (1)
   {
-    Read_LSM();
-    readGyro();
-    Print_LSM();
-    
-    HAL_Delay(100);
+    /* USER CODE END WHILE */
+
+    /* USER CODE BEGIN 3 */
+    if (IMU_Update(&imu_angles) == 0)
+    {
+      int len = snprintf(uart_msg, sizeof(uart_msg),
+                         "%.2f,%.2f,%.2f\r\n",
+                         imu_angles.angle,
+                         imu_angles.accel,
+                         imu_angles.gyro);
+      if (len > 0)
+      {
+        HAL_UART_Transmit(&huart1, (uint8_t *)uart_msg, (uint16_t)len, 100);
+      }
+    }
+    HAL_Delay(10);
   }
   /* USER CODE END 3 */
 }
@@ -311,10 +185,11 @@ void SystemClock_Config(void)
     Error_Handler();
   }
   PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USB|RCC_PERIPHCLK_USART1
-                              |RCC_PERIPHCLK_I2C1;
+                              |RCC_PERIPHCLK_I2C1|RCC_PERIPHCLK_TIM1;
   PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK2;
   PeriphClkInit.I2c1ClockSelection = RCC_I2C1CLKSOURCE_HSI;
   PeriphClkInit.USBClockSelection = RCC_USBCLKSOURCE_PLL;
+  PeriphClkInit.Tim1ClockSelection = RCC_TIM1CLK_HCLK;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
     Error_Handler();
@@ -337,7 +212,7 @@ static void MX_I2C1_Init(void)
 
   /* USER CODE END I2C1_Init 1 */
   hi2c1.Instance = I2C1;
-  hi2c1.Init.Timing = 0x2000090E;
+  hi2c1.Init.Timing = 0x00201D2B;
   hi2c1.Init.OwnAddress1 = 0;
   hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
   hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
@@ -398,7 +273,7 @@ static void MX_SPI1_Init(void)
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
   hspi1.Init.CRCPolynomial = 7;
   hspi1.Init.CRCLength = SPI_CRC_LENGTH_DATASIZE;
-  hspi1.Init.NSSPMode = SPI_NSS_PULSE_ENABLE;
+  hspi1.Init.NSSPMode = SPI_NSS_PULSE_DISABLE;
   if (HAL_SPI_Init(&hspi1) != HAL_OK)
   {
     Error_Handler();
@@ -406,6 +281,120 @@ static void MX_SPI1_Init(void)
   /* USER CODE BEGIN SPI1_Init 2 */
 
   /* USER CODE END SPI1_Init 2 */
+
+}
+
+/**
+  * @brief TIM1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM1_Init(void)
+{
+
+  /* USER CODE BEGIN TIM1_Init 0 */
+
+  /* USER CODE END TIM1_Init 0 */
+
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+  TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig = {0};
+
+  /* USER CODE BEGIN TIM1_Init 1 */
+
+  /* USER CODE END TIM1_Init 1 */
+  htim1.Instance = TIM1;
+  htim1.Init.Prescaler = 47;
+  htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim1.Init.Period = 65535;
+  htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim1.Init.RepetitionCounter = 0;
+  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_OC_Init(&htim1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterOutputTrigger2 = TIM_TRGO2_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_TIMING;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
+  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+  if (HAL_TIM_OC_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
+  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
+  sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
+  sBreakDeadTimeConfig.DeadTime = 0;
+  sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
+  sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
+  sBreakDeadTimeConfig.BreakFilter = 0;
+  sBreakDeadTimeConfig.Break2State = TIM_BREAK2_DISABLE;
+  sBreakDeadTimeConfig.Break2Polarity = TIM_BREAK2POLARITY_HIGH;
+  sBreakDeadTimeConfig.Break2Filter = 0;
+  sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
+  if (HAL_TIMEx_ConfigBreakDeadTime(&htim1, &sBreakDeadTimeConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM1_Init 2 */
+
+  /* USER CODE END TIM1_Init 2 */
+
+}
+
+/**
+  * @brief TIM2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM2_Init(void)
+{
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 4799;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 49;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+
+  /* USER CODE END TIM2_Init 2 */
 
 }
 
