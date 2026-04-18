@@ -21,13 +21,13 @@ extern I2C_HandleTypeDef hi2c1;
 #define GYRO_SENS_DPS_PER_LSB 0.00875f
 #define RAD_TO_DEG            57.2957795f
 #define ALPHA                 0.93f
-#define DT_S                  0.01f
+#define DT_S                  0.005f
 #define ACC_LPF_BETA          0.80f
 #define GYRO_DEADBAND_DPS     0.15f
 
 static float pitch_deg = 0.0f;
-static float gyro_bias_x_dps = 0.0f;
-static float acc_pitch_offset_deg = 0.0f;
+static float gyro_bias_x_dps = 0.74f;
+static float acc_pitch_offset_deg = -4.76f;
 
 static HAL_StatusTypeDef Gyro_WriteReg(uint8_t reg, uint8_t value)
 {
@@ -105,12 +105,6 @@ static int Accel_ReadRaw(int16_t *ax, int16_t *ay, int16_t *az)
 
 int IMU_Init(void)
 {
-    int16_t gx = 0, gy = 0, gz = 0;
-    int16_t ax = 0, ay = 0, az = 0;
-    int32_t sum_x = 0;
-    float sum_acc_pitch = 0.0f;
-    const uint16_t samples = 300U;
-
     GYRO_CS_HIGH();
 
     if (Gyro_WriteReg(L3GD20_CTRL1, 0xBFU) != HAL_OK)
@@ -133,26 +127,23 @@ int IMU_Init(void)
 
     HAL_Delay(20);
 
-    for (uint16_t i = 0; i < samples; i++)
-    {
-        if (Gyro_ReadRaw(&gx, &gy, &gz) != 0)
-        {
-            return -1;
-        }
-        if (Accel_ReadRaw(&ax, &ay, &az) != 0)
-        {
-            return -1;
-        }
-        sum_x += gx;
-        sum_acc_pitch += atan2f((float)ax, (float)az) * RAD_TO_DEG;
-        HAL_Delay(2);
-    }
+    // for (uint16_t i = 0; i < samples; i++)
+    // {
+    //     if (Gyro_ReadRaw(&gx, &gy, &gz) != 0)
+    //     {
+    //         return -1;
+    //     }
+    //     if (Accel_ReadRaw(&ax, &ay, &az) != 0)
+    //     {
+    //         return -1;
+    //     }
+    //     sum_x += gx;
+    //     sum_acc_pitch += atan2f((float)ax, (float)az) * RAD_TO_DEG;
+    //     HAL_Delay(2);
+    // }
 
-    (void)gy;
-    (void)gz;
-
-    gyro_bias_x_dps = ((float)sum_x / (float)samples) * GYRO_SENS_DPS_PER_LSB;
-    acc_pitch_offset_deg = sum_acc_pitch / (float)samples;
+    // gyro_bias_x_dps = ((float)sum_x / (float)samples) * GYRO_SENS_DPS_PER_LSB;
+    // acc_pitch_offset_deg = sum_acc_pitch / (float)samples;
 
     pitch_deg = 0.0f;
     return 0;
@@ -198,8 +189,5 @@ int IMU_Update(IMU_Angles_t *angles)
     pitch_deg = ALPHA * (pitch_deg + gyro_x_dps * DT_S) + (1.0f - ALPHA) * acc_pitch;
 
     angles->angle = pitch_deg;
-    angles->accel = acc_pitch;
-    angles->gyro = gyro_x_dps;
-
     return 0;
 }

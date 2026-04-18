@@ -10,8 +10,6 @@ extern "C" {
 typedef struct
 {
     float angle;
-    float accel;
-    float gyro;
 } IMU_Angles_t;
 
 int IMU_Init(void);
