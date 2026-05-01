@@ -60,9 +60,9 @@ PCD_HandleTypeDef hpcd_USB_FS;
 /* USER CODE BEGIN PV */
 PID_Controller balance_pid;
 
-IMU_Angles_t imu_angles;
+struct imu_output output;
 char uart_msg[96];
-
+int flag = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -121,18 +121,16 @@ int main(void)
   MX_USB_PCD_Init();
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
-  if (IMU_Init() != 0)
-  {
-    Error_Handler();
-  }
-
+  IMU_Init(&hspi1, &hi2c1);
   PID_Init(&balance_pid);
 
-  /* Start TIM2 interrupt */
+  IMU_OffsetCalibrate(&hspi1, &hi2c1);
+
   if (HAL_TIM_Base_Start_IT(&htim2) != HAL_OK)
   {
     Error_Handler();
   }
+
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);
 
@@ -585,30 +583,42 @@ static void MX_GPIO_Init(void)
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   if (htim->Instance == TIM2) {
-    /* Add your code here - this executes on every TIM2 timer reset */
-    IMU_Update(&imu_angles);
+
+    output = IMU_UpdateAngle(&hspi1, &hi2c1);
     
-    float output = PID_Compute(&balance_pid, imu_angles.angle);
+    if(flag >= 9){
+      flag = 0;
+      int len = snprintf(uart_msg, sizeof(uart_msg), "%.2f\r\n", output.tilt_angle);
+      if (len > 0)
+      {
+        HAL_UART_Transmit(&huart1, (uint8_t *)uart_msg, (uint16_t)len, 100);
+      }
+    }
+
+    if (output.tilt_angle > 45.0f || output.tilt_angle < -45.0f) {
+        PID_ApplyMotors(0.0f,
+                        &htim3,
+                        TIM_CHANNEL_2, TIM_CHANNEL_3,
+                        GPIOC, GPIO_PIN_1,
+                        GPIOC, GPIO_PIN_0,
+                        GPIOC, GPIO_PIN_3,
+                        GPIOC, GPIO_PIN_2);
+        return;
+    }
+    else{
+      float output2 = PID_Compute(&balance_pid, output.tilt_angle);
+          
+      PID_ApplyMotors(output2,
+        &htim3,
+        TIM_CHANNEL_2, TIM_CHANNEL_3,
+        GPIOC, GPIO_PIN_1,
+        GPIOC, GPIO_PIN_0,
+        GPIOC, GPIO_PIN_3,
+        GPIOC, GPIO_PIN_2);
+        }
+    flag++;
+    }
     
-    PID_ApplyMotors(output,
-                    &htim3,
-                    TIM_CHANNEL_2, TIM_CHANNEL_3,
-                    GPIOC, GPIO_PIN_1,
-                    GPIOC, GPIO_PIN_0,
-                    GPIOC, GPIO_PIN_3,
-                    GPIOC, GPIO_PIN_2);
-    
-                    // if (IMU_Update(&imu_angles) == 0)
-    // {
-      // int len = snprintf(uart_msg, sizeof(uart_msg),
-      //                    "%.2f\r\n",
-      //                    imu_angles.angle);
-      // if (len > 0)
-      // {
-      //   HAL_UART_Transmit(&huart1, (uint8_t *)uart_msg, (uint16_t)len, 100);
-      // }
-    // }
-  }
 }
 
 /* USER CODE END 4 */

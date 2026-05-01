@@ -127,24 +127,6 @@ int IMU_Init(void)
 
     HAL_Delay(20);
 
-    // for (uint16_t i = 0; i < samples; i++)
-    // {
-    //     if (Gyro_ReadRaw(&gx, &gy, &gz) != 0)
-    //     {
-    //         return -1;
-    //     }
-    //     if (Accel_ReadRaw(&ax, &ay, &az) != 0)
-    //     {
-    //         return -1;
-    //     }
-    //     sum_x += gx;
-    //     sum_acc_pitch += atan2f((float)ax, (float)az) * RAD_TO_DEG;
-    //     HAL_Delay(2);
-    // }
-
-    // gyro_bias_x_dps = ((float)sum_x / (float)samples) * GYRO_SENS_DPS_PER_LSB;
-    // acc_pitch_offset_deg = sum_acc_pitch / (float)samples;
-
     pitch_deg = 0.0f;
     return 0;
 }
